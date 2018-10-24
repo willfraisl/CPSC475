@@ -16,11 +16,11 @@ import random
 from collections import OrderedDict 
 
 def main():
-    tmp = brown.words(categories='editorial')
-    tokens = [item.encode('ascii') for item in tmp]
+    brown_words = brown.words(categories='editorial')
+    tokens = [item.encode('ascii') for item in brown_words]
 
     #remove punctuation and lowercase
-    tokens = [item.lower() for item in tokens if re.findall(r'\w+', item)]
+    tokens = [re.sub(r'[.]', '', item).lower() for item in tokens]
     
     dictionary_of_tokens = OrderedDict()
     for token in tokens:
