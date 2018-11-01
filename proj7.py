@@ -1,5 +1,13 @@
 '''
-Will Fraisl
+Class: CPSC 475
+Team Member 1: Will Fraisl
+Team Member 2: N/A
+GU Username of project lead: wfraisl
+Pgm Name: proj6.py
+Desrciption: Creates 5 sentences of 10 words long using unigrams
+    from brown corpus.
+Usage: python proj5.py
+Due: 10/26/18
 '''
 
 import re
@@ -11,91 +19,87 @@ def clean_file():
     file = open('100-0.txt','r') #open file
     lines = file.read().splitlines() #split file into lines
     lines = lines[140:149259] #remove garbage at beginning and end
-    lines = [line for line in lines if line] #remove empty strings
-    lines = [re.sub(r'[\xe2\x80\x99]', '\'', line) for line in lines] #replace unicode apostophe
-    #TODO remove other unicode symbols
+    lines = [re.sub(r'\xe2\x80\x99', '\'', line) for line in lines] #replace unicode apostophe
     lines = [re.findall(r'[a-zA-Z\']+', line) for line in lines] #remove non-word characters
-    words = [word for line in lines for word in ['<s>'] + line + ['</s>']] #flatten list and add line markers
-    words = [word.lower() for word in words] #make all words lowercase
-    words = [re.sub(r'\'\'\'','\'',word) for word in words] #remove weird triple quotes
-    return words
+    lines = [[word.lower() for word in line] for line in lines if line] #make all words lowercase and remove empty
+    return lines
+
+def create_dictionary(num, lines):
+    dict = OrderedDict()
+    total = 0
+    for line in lines:
+        line = ['<s>'] + line + ['</s>']
+        for i in range(len(line)-num+1):
+            key = tuple(line[i+j] for j in range(num))
+            total += 1
+            if key in dict:
+                dict[key] += 1
+            else:
+                dict[key] = 1
+    return dict, total
+
+def create_cumulative_prob(relative_freq):
+    prev = 0
+    cumulative_prob = OrderedDict()
+    for key, val in relative_freq.items():
+        cumulative_prob[key] = prev + val
+        prev = cumulative_prob[key]
+    return cumulative_prob
+
+def make_sentence(cumulative_prob, size_of_gram, num_grams):
+    sentence = ''
+    for i in range(num_grams):
+        rand = random.random()
+        gram = get_gram(cumulative_prob, rand)
+        while((i==0 and gram[0]!='<s>') or (i==num_grams-1 and gram[size_of_gram-1]!='</s>')):
+            rand = random.random()
+            gram = get_gram(cumulative_prob, rand)
+        for word in gram:
+            sentence += word + ' '
+    sentence = sentence[:-1] 
+    sentence = sentence.capitalize()
+    return sentence
+
+def get_gram(cumulative_prob, rand):
+    for key, val in cumulative_prob.items():
+        if val > rand:
+            return key
 
 def main():
-    words = clean_file()
+    show_markers = input('Would you like to see line markers? (True/False): ')
 
-    #unigram words (remove <s> and </s>)
-    unigram_words = [re.sub(r'<s>','',word) for word in words]
-    unigram_words = [re.sub(r'</s>','',word) for word in unigram_words]
-    unigram_words = [word for word in unigram_words if word] #remove empty strings
+    #cleaning file
+    lines = clean_file()
 
-    unigram_dictionary_of_tokens = OrderedDict()
-    for token in unigram_words[:-1]:
-        if token in unigram_dictionary_of_tokens:
-            unigram_dictionary_of_tokens[token] += 1
-        else:
-            unigram_dictionary_of_tokens[token] = 1
+    #creating unigram dictionary
+    unigram_dictionary = OrderedDict()
+    unigram_total = 0
+    for line in lines:
+        for word in line:
+            unigram_total += 1
+            if word in unigram_dictionary:
+                unigram_dictionary[word] += 1
+            else:
+                unigram_dictionary[word] = 1
 
-    bigram_dictionary_of_tokens = OrderedDict()
-    for i in range(len(words)-1):
-        if words[i] +' '+ words[i+1] in bigram_dictionary_of_tokens:
-            bigram_dictionary_of_tokens[words[i] +' '+ words[i+1]] += 1
-        else:
-            bigram_dictionary_of_tokens[words[i] +' '+ words[i+1]] = 1
+    #creating > 1 dictionarys
+    bigram_dictionary, bigram_total = create_dictionary(2,lines)
+    trigram_dictionary, trigram_total = create_dictionary(3,lines)
+    quadgram_dictionary, quadgram_total = create_dictionary(4,lines)
 
-    trigram_dictionary_of_tokens = OrderedDict()
-    for i in range(len(words)-2):
-        if words[i] +' '+ words[i+1] +' '+ words[i+2] in trigram_dictionary_of_tokens:
-            trigram_dictionary_of_tokens[words[i] +' '+ words[i+1] +' '+ words[i+2]] += 1
-        else:
-            trigram_dictionary_of_tokens[words[i] +' '+ words[i+1] +' '+ words[i+2]] = 1
+    #creating relative frequencies
+    unigram_relative_freq = {key:float(item)/unigram_total for key, item in unigram_dictionary.items()}
+    bigram_relative_freq = {key:float(item)/bigram_total for key, item in bigram_dictionary.items()}
+    trigram_relative_freq = {key:float(item)/trigram_total for key, item in trigram_dictionary.items()}
+    quadgram_relative_freq = {key:float(item)/quadgram_total for key, item in quadgram_dictionary.items()}
 
-    quadgram_dictionary_of_tokens = OrderedDict()
-    for i in range(len(words)-3):
-        if words[i] +' '+ words[i+1] +' '+ words[i+2] +' '+ words[i+3] in quadgram_dictionary_of_tokens:
-            quadgram_dictionary_of_tokens[words[i] +' '+ words[i+1] +' '+ words[i+2] +' '+ words[i+3]] += 1
-        else:
-            quadgram_dictionary_of_tokens[words[i] +' '+ words[i+1] +' '+ words[i+2] +' '+ words[i+3]] = 1
+    unigram_cumulative_prob = create_cumulative_prob(unigram_relative_freq)
+    bigram_cumulative_prob = create_cumulative_prob(bigram_relative_freq)
+    trigram_cumulative_prob = create_cumulative_prob(trigram_relative_freq)
+    quadgram_cumulative_prob = create_cumulative_prob(quadgram_relative_freq)
 
-    unigram_total = len(unigram_words)
-    bigram_total = len(words)-1
-    trigram_total = len(words)-2
-    quadgram_total = len(words)-3
-
-    del bigram_dictionary_of_tokens['</s> <s>']
-    del trigram_dictionary_of_tokens['</s> <s>']
-    del quadgram_dictionary_of_tokens['</s> <s>']
-
-    unigram_relative_freq = {key:float(item)/unigram_total for key, item in unigram_dictionary_of_tokens.items()}
-    bigram_relative_freq = {key:float(item)/bigram_total for key, item in bigram_dictionary_of_tokens.items()}
-    trigram_relative_freq = {key:float(item)/trigram_total for key, item in trigram_dictionary_of_tokens.items()}
-    quadgram_relative_freq = {key:float(item)/quadgram_total for key, item in quadgram_dictionary_of_tokens.items()}
-
-    prev = 0
-    unigram_cumulative_prob = OrderedDict()
-    for key, val in unigram_relative_freq.items():
-        unigram_cumulative_prob[key] = prev + val
-        prev = unigram_cumulative_prob[key]
-
-    prev = 0
-    bigram_cumulative_prob = OrderedDict()
-    for key, val in bigram_relative_freq.items():
-        bigram_cumulative_prob[key] = prev + val
-        prev = bigram_cumulative_prob[key]
-
-    prev = 0
-    trigram_cumulative_prob = OrderedDict()
-    for key, val in trigram_relative_freq.items():
-        trigram_cumulative_prob[key] = prev + val
-        prev = trigram_cumulative_prob[key]
-
-    prev = 0
-    quadgram_cumulative_prob = OrderedDict()
-    for key, val in quadgram_relative_freq.items():
-        quadgram_cumulative_prob[key] = prev + val
-        prev = quadgram_cumulative_prob[key]
-     
-    #unigram
-    print 'Unigram Sentences:'
+    #print unigram sentences
+    print '\nUnigram Sentences:'
     for _ in range(5):
         sentence = ''
         for _ in range(12):
@@ -110,52 +114,20 @@ def main():
         sentence = sentence.capitalize()
         print(sentence)
 
-    #bigram
+    #print bigram sentences
     print '\nBigram Sentences:'
     for _ in range(5):
-        sentence = ''
-        for i in range(6):
-            rand = random.random()
-            for key, val in bigram_cumulative_prob.items():
-                if val > rand:
-                    word = key
-                    break
-            sentence += word + ' '
-        sentence = sentence[:-1] 
-        sentence += '.'
-        sentence = sentence.capitalize()
-        print(sentence)
+        print make_sentence(bigram_cumulative_prob, 2, 6)
 
-    #trigram
+    #print trigram sentences
     print '\nTrigram Sentences:'
     for _ in range(5):
-        sentence = ''
-        for i in range(4):
-            rand = random.random()
-            for key, val in trigram_cumulative_prob.items():
-                if val > rand:
-                    word = key
-                    break
-            sentence += word + ' '
-        sentence = sentence[:-1] 
-        sentence += '.'
-        sentence = sentence.capitalize()
-        print(sentence)
+        print make_sentence(trigram_cumulative_prob, 3, 4)
 
-    #quadgram
+    #print quadgram sentences
     print '\nQuadgram Sentences:'
     for _ in range(5):
-        sentence = ''
-        for i in range(3):
-            rand = random.random()
-            for key, val in quadgram_cumulative_prob.items():
-                if val > rand:
-                    word = key
-                    break
-            sentence += word + ' '
-        sentence = sentence[:-1] 
-        sentence += '.'
-        sentence = sentence.capitalize()
-        print(sentence)
+        print make_sentence(quadgram_cumulative_prob, 4, 3)
+
 
 main()
