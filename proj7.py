@@ -21,7 +21,7 @@ def clean_file():
     lines = lines[140:149259] #remove garbage at beginning and end
     lines = [re.sub(r'\xe2\x80\x99', '\'', line) for line in lines] #replace unicode apostophe
     lines = [re.findall(r'[a-zA-Z\']+', line) for line in lines] #remove non-word characters
-    lines = [[word.lower() for word in line] for line in lines if line] #make all words lowercase and remove empty
+    lines = [[word.lower() for word in line] for line in lines if len(line) > 4] #make all words lowercase and remove empty
     return lines
 
 def create_dictionary(num, lines):
@@ -46,18 +46,25 @@ def create_cumulative_prob(relative_freq):
         prev = cumulative_prob[key]
     return cumulative_prob
 
-def make_sentence(cumulative_prob, size_of_gram, num_grams):
+def make_sentence(cumulative_prob, size_of_gram, num_grams, show_markers):
     sentence = ''
     for i in range(num_grams):
         rand = random.random()
         gram = get_gram(cumulative_prob, rand)
-        while((i==0 and gram[0]!='<s>') or (i==num_grams-1 and gram[size_of_gram-1]!='</s>')):
-            rand = random.random()
-            gram = get_gram(cumulative_prob, rand)
+        if i==0 or i==num_grams-1:
+            while((i==0 and gram[0]!='<s>') or (i==num_grams-1 and gram[size_of_gram-1]!='</s>')):
+                rand = random.random()
+                gram = get_gram(cumulative_prob, rand)
+        else:
+            while(set(('<s>',)).issubset(gram) or set(('</s>',)).issubset(gram)):
+                rand = random.random()
+                gram = get_gram(cumulative_prob, rand)
         for word in gram:
             sentence += word + ' '
     sentence = sentence[:-1] 
-    sentence = sentence.capitalize()
+    sentence = sentence[:4] + sentence[4].upper() + sentence[5:-5] + '.' + sentence[-5:]
+    if not show_markers:
+        sentence = sentence[4:-4]
     return sentence
 
 def get_gram(cumulative_prob, rand):
@@ -117,17 +124,17 @@ def main():
     #print bigram sentences
     print '\nBigram Sentences:'
     for _ in range(5):
-        print make_sentence(bigram_cumulative_prob, 2, 6)
+        print make_sentence(bigram_cumulative_prob, 2, 6, show_markers)
 
     #print trigram sentences
     print '\nTrigram Sentences:'
     for _ in range(5):
-        print make_sentence(trigram_cumulative_prob, 3, 4)
+        print make_sentence(trigram_cumulative_prob, 3, 4, show_markers)
 
     #print quadgram sentences
     print '\nQuadgram Sentences:'
     for _ in range(5):
-        print make_sentence(quadgram_cumulative_prob, 4, 3)
+        print make_sentence(quadgram_cumulative_prob, 4, 3, show_markers)
 
 
 main()
