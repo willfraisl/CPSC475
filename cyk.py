@@ -11,13 +11,12 @@ Due: 12/13/18
 
 import sys
 import numpy
-import pprint
 
 
 def main():
     # checking usage
     if len(sys.argv) != 3:
-        print "usage: python cyk.py cfg1.txt strng1.txt"
+        print "usage: python cyk.py cfg.txt strng.txt"
         exit(1)
 
     # read grammar in to have language
@@ -25,7 +24,8 @@ def main():
 
     # getting string
     str = open(sys.argv[2], 'r').read().split()
-    print str
+    if len(str) == 1:
+        str = list(str[0])
 
     # print if string is in language based on cyk
     print is_cyk(lang, str)
@@ -37,7 +37,8 @@ def read_lang(file_name):
     for line in f:
         line = line.split()
         key = line[0]
-        lang[key] = []
+        if not key in lang:
+            lang[key] = []
         for val in line[2:]:
             lang[key].append(val)
     f.close()
@@ -62,10 +63,8 @@ def is_cyk(lang, str):
                 for b in mat[i][k]:
                     for c in mat[k+1][i+step-1]:
                         for key, vals in lang.items():
-                            if b+c in vals:
+                            if b+'+'+c in vals:
                                 mat[i][i+step-1].append(key)
-
-    pprint.pprint(mat)
 
     # return true if "S" in in top right
     return "S" in mat[1][str_len]
